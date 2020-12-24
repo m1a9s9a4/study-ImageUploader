@@ -3,6 +3,7 @@ import image from '../image.svg';
 import {makeStyles, Theme} from '@material-ui/core';
 import {useDropzone} from 'react-dropzone';
 import { Progress } from 'reactstrap';
+import axios from 'axios';
 
 const useStyles = makeStyles((theme: Theme) => ({
   wrapper: {
@@ -17,27 +18,39 @@ const useStyles = makeStyles((theme: Theme) => ({
   }
 }));
 
-function saveImage(file: File) {
-  console.log(file);
-}
-
-
 function ImageUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [files, setFiles] = useState({});
   const onDrop = useCallback(acceptedFiles => {
     setIsUploading(true);
     setIsUploaded(false);
     acceptedFiles.forEach((file: File) => {
+      const params = new FormData();
+      params.append('file', file);
       setTimeout(() => {
-        saveImage(file);
-        const newProgress = progress + 100 / acceptedFiles.length;
-        setProgress(newProgress);
+        axios.post('http://localhost:8000/api/upload/',
+          params,
+          {
+            headers: {
+            'content-type': 'multipart/form-data',
+          },
+        })
+          .then(({data}) => {
+            const newProgress = progress + 100 / acceptedFiles.length;
+            setProgress(newProgress);
+            console.log(data);
+            const newFiles = {path: data.path, name: data.name};
+            setFiles(newFiles);
+          })
+          .catch((error) => {
+            console.error(error);
+          })
       }, 3000)
     });
   }, [progress, setIsUploading])
-  const {acceptedFiles, getRootProps, getInputProps} = useDropzone({onDrop});
+  const {getRootProps, getInputProps} = useDropzone({onDrop});
   const classes = useStyles();
 
   if (isUploading && progress === 100) {
@@ -50,9 +63,7 @@ function ImageUpload() {
     <div className={classes.wrapper}>
       {isUploaded ? (
         <ul>
-          {acceptedFiles.map((file: File, index: number) => (
-            <li key={index}>{file.name}</li>
-          ))}
+          <a href={files.path}>{files.name}</a>
         </ul>
       ) : (
         ""
