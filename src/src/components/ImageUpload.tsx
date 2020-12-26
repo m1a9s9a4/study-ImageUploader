@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useRef} from 'react';
 import image from '../image.svg';
 import {makeStyles, Theme} from '@material-ui/core';
 import {useDropzone} from 'react-dropzone';
@@ -15,6 +15,14 @@ const useStyles = makeStyles((theme: Theme) => ({
   image: {
     width: "80%",
     marginLeft: "10%",
+    objectFit: "contain",
+    borderRadius: '5px',
+  },
+  uploadedWrapper: {
+    marginBottom: "10px",
+  },
+  input: {
+    width: "100%",
   }
 }));
 
@@ -22,7 +30,13 @@ function ImageUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [files, setFiles] = useState({});
+  const [copySuccess, setCopySuccess] = useState('');
+  const imagePath = useRef(null);
+  const classes = useStyles();
+  const [file, setFile] = useState({
+    path: '',
+    name: '',
+  });
   const onDrop = useCallback(acceptedFiles => {
     setIsUploading(true);
     setIsUploaded(false);
@@ -42,16 +56,28 @@ function ImageUpload() {
             setProgress(newProgress);
             console.log(data);
             const newFiles = {path: data.path, name: data.name};
-            setFiles(newFiles);
+            setFile(newFiles);
           })
           .catch((error) => {
             console.error(error);
           })
       }, 3000)
     });
-  }, [progress, setIsUploading])
+  }, [progress, setIsUploading]);
   const {getRootProps, getInputProps} = useDropzone({onDrop});
-  const classes = useStyles();
+
+
+  const handleCopy = (e: any) => {
+    if (imagePath && imagePath.current) {
+      //@ts-ignore
+      imagePath.current.select();
+      //@ts-ignore
+      const copied = document.execCommand("copy")
+      console.log(copied);
+      setCopySuccess('Copied!');
+    }
+  }
+
 
   if (isUploading && progress === 100) {
     setTimeout(() => {
@@ -62,9 +88,17 @@ function ImageUpload() {
   return (
     <div className={classes.wrapper}>
       {isUploaded ? (
-        <ul>
-          <a href={files.path}>{files.name}</a>
-        </ul>
+        <div className={classes.uploadedWrapper}>
+          <img
+              title="Inline Frame Example"
+              className={classes.image}
+              src={"http://localhost:8000"+file.path} />
+          <form>
+            <textarea ref={imagePath} defaultValue={"http://localhost:8000"+file.path} className={classes.input} />
+          </form>
+          <button onClick={handleCopy}>copy</button>
+          {copySuccess}
+        </div>
       ) : (
         ""
       )}
